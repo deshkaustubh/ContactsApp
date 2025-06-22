@@ -1,33 +1,33 @@
-# ContactsApp
+# ContactsApp 📱
 
 ContactsApp is a simple Android application built with Kotlin and Jetpack Compose that allows users to manage their personal contacts. The app uses Room for local database storage and supports adding, editing, viewing, and deleting contacts. Each contact can have a name, phone number, email, and an optional profile image.
 
-## Features
-- Add new contacts with name, phone number, email, and image
-- Edit existing contacts
-- Delete contacts
-- View a list of all contacts
-- View detailed information for each contact
-- Persist data locally using Room database
-- Modern UI with Jetpack Compose
+## Features ✨
+- ➕ Add new contacts with name, phone number, email, and image
+- ✏️ Edit existing contacts
+- 🗑️ Delete contacts
+- 📋 View a list of all contacts
+- 🔍 View detailed information for each contact
+- 💾 Persist data locally using Room database
+- 🎨 Modern UI with Jetpack Compose
 
-## Tech Stack
+## Tech Stack 🛠️
 - Kotlin
 - Jetpack Compose
 - Room Database
 - MVVM Architecture
 
-## Getting Started
+## Getting Started 🚀
 1. Clone the repository or download the source code.
 2. Open the project in Android Studio.
 3. Build and run the app on an emulator or Android device.
 
-## Folder Structure
+## Folder Structure 🗂️
 - `app/src/main/java/com/example/contactsapp/` - Main source code (models, viewmodels, repository, UI)
 - `app/src/main/res/` - Resources (layouts, drawables, etc.)
 - `app/src/main/AndroidManifest.xml` - App manifest
 
-## Implementation Guide
+## Implementation Guide 📝
 
 Follow these steps to build a simple Contacts App using Kotlin, Jetpack Compose, and Room. Each step includes code examples from this project for clarity.
 
@@ -46,7 +46,7 @@ data class Contact(
 )
 ```
 
-### 2. Add Dependencies
+### 2. Add Dependencies 📦
 Add the required dependencies for Room, Lifecycle, Navigation, and Compose in your `build.gradle.kts`:
 
 ```kotlin
@@ -58,7 +58,7 @@ implementation("io.coil-kt:coil-compose:2.1.0")
 ksp("androidx.room:room-compiler:2.6.1")
 ```
 
-### 3. Create the DAO (Data Access Object)
+### 3. Create the DAO (Data Access Object) 🗃️
 Define an interface for database operations:
 
 ```kotlin
@@ -75,7 +75,7 @@ interface ContactDao {
 }
 ```
 
-### 4. Create the Database
+### 4. Create the Database 🏦
 Create an abstract class extending `RoomDatabase`:
 
 ```kotlin
@@ -85,7 +85,7 @@ abstract class ContactDatabase : RoomDatabase() {
 }
 ```
 
-### 5. Create the Repository
+### 5. Create the Repository 📚
 The repository abstracts access to multiple data sources:
 
 ```kotlin
@@ -97,7 +97,7 @@ class ContactRepository(private val contactDao: ContactDao) {
 }
 ```
 
-### 6. Create the ViewModel
+### 6. Create the ViewModel 🧠
 The ViewModel provides data to the UI and handles logic:
 
 ```kotlin
@@ -118,7 +118,7 @@ class ContactViewModel(private val repository: ContactRepository) : ViewModel() 
 }
 ```
 
-### 7. Set Up the MainActivity
+### 7. Set Up the MainActivity 🏁
 Initialize the database, repository, and ViewModel. Set up navigation and screens:
 
 ```kotlin
@@ -131,7 +131,7 @@ val repository = ContactRepository(database.contactDao())
 val viewmodel: ContactViewModel by viewModels { ContactViewModelFactory(repository) }
 ```
 
-### 8. Build the UI with Jetpack Compose
+### 8. Build the UI with Jetpack Compose 🎨
 Create composable functions for listing, adding, editing, and viewing contacts. Example for adding a contact:
 
 ```kotlin
@@ -147,8 +147,8 @@ fun AddContactScreen(viewModel: ContactViewModel, navController: NavController) 
 }
 ```
 
-### 9. Run the App
+### 9. Run the App ▶️
 Build and run the app on an emulator or device. You can now add, edit, view, and delete contacts.
 
-## License
+## License 📄
 This project is for educational purposes.
