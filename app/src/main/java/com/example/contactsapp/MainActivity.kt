@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -321,12 +323,35 @@ fun copyUriToInternalStorage(context: Context, uri: Uri, fileName: String): Stri
 
 // ContactItem Composable to display each contact in a list
 @Composable
-fun ContactItem(contact: Contact, onClick: () -> Unit) {
+fun ContactItem(contact: Contact, onEdit: () -> Unit, onDelete: () -> Unit) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragOffsetY by remember { mutableStateOf(0f) }
+    val binThreshold = 100f // Drag distance in pixels to trigger delete
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp, end = 8.dp, start = 8.dp, bottom = 4.dp)
-            .clickable(onClick = onClick),
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { isDragging = true },
+                    onDragEnd = {
+                        if (dragOffsetY > binThreshold) {
+                            onDelete()
+                        }
+                        isDragging = false
+                        dragOffsetY = 0f
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                        dragOffsetY = 0f
+                    },
+                    onDrag = { _: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: androidx.compose.ui.geometry.Offset ->
+                        dragOffsetY += dragAmount.y
+                    }
+                )
+            }
+            .clickable(enabled = !isDragging, onClick = onEdit),
         colors = CardDefaults.cardColors(Color.White),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
@@ -356,6 +381,14 @@ fun ContactItem(contact: Contact, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.size(16.dp))
             Text(text = contact.name)
+            if (isDragging && dragOffsetY > binThreshold) {
+                Spacer(modifier = Modifier.size(16.dp))
+                Icon(
+                    imageVector = Icons.Filled.Edit, // You can use a bin icon if available
+                    contentDescription = "Delete Bin",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }
@@ -365,6 +398,7 @@ fun ContactItem(contact: Contact, onClick: () -> Unit) {
 @Composable
 fun ContactListScreen(viewModel: ContactViewModel, navController: NavController) {
     val context = LocalContext.current.applicationContext
+    val contacts by viewModel.allContacts.observeAsState(initial = emptyList())
     Scaffold(
         topBar = {
             TopAppBar(
@@ -417,14 +451,18 @@ fun ContactListScreen(viewModel: ContactViewModel, navController: NavController)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            val contacts by viewModel.allContacts.observeAsState(initial = emptyList())
             if (contacts.isEmpty()) {
                 Text(text = "No Contacts Available", modifier = Modifier.padding(16.dp))
             } else {
                 contacts.forEach { contact ->
-                    ContactItem(contact = contact) {
-                        navController.navigate("contactDetail/${contact.id}")
-                    }
+                    ContactItem(
+                        contact = contact,
+                        onEdit = { navController.navigate("editContact/${contact.id}") },
+                        onDelete = {
+                            viewModel.deleteContact(contact)
+                            Toast.makeText(context, "Contact deleted", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
         }
@@ -571,34 +609,26 @@ fun EditContactScreen(contact: Contact, viewModel: ContactViewModel, navControll
     val context = LocalContext.current
     var imageUri by remember {
         mutableStateOf<Uri?>(
-            if (contact.image.isNotEmpty()) {
+            if (contact.image.isNotEmpty() && contact.image.startsWith("content://")) {
+                Uri.parse(contact.image)
+            } else if (contact.image.isNotEmpty()) {
                 Uri.fromFile(File(contact.image))
             } else {
                 null
             }
         )
     }
-    var name by remember {
-        mutableStateOf(contact.name)
-    }
-    var email by remember {
-        mutableStateOf(contact.email)
-    }
-    var phoneNumber by remember {
-        mutableStateOf(contact.phoneNumber)
-    }
+    var name by remember { mutableStateOf(contact.name) }
+    var email by remember { mutableStateOf(contact.email) }
+    var phoneNumber by remember { mutableStateOf(contact.phoneNumber) }
+    var newImagePicked by remember { mutableStateOf(false) }
     val launcher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let { newUri ->
-                val internalPath = copyUriToInternalStorage(context, newUri, "${contact.name}.jpg")
-                if (internalPath != null) {
-                    imageUri = Uri.fromFile(File(internalPath))
-                } else {
-                    Toast.makeText(context, "Failed to update image", Toast.LENGTH_SHORT).show()
-                }
+                imageUri = newUri
+                newImagePicked = true
             }
         }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -710,14 +740,12 @@ fun EditContactScreen(contact: Contact, viewModel: ContactViewModel, navControll
             Spacer(modifier = Modifier.size(16.dp))
             Button(
                 onClick = {
-                    val finalImagePath = imageUri?.let { uri ->
-                        if (uri.scheme == "content") {
-                            copyUriToInternalStorage(context, uri, "$name.jpg")
-                        } else {
-                            contact.image // Keep original path if image not changed
-                        }
-                    } ?: contact.image // Keep original image path if no new image selected
-
+                    val finalImagePath = if (newImagePicked && imageUri != null) {
+                        // Always copy to internal storage if a new image was picked
+                        copyUriToInternalStorage(context, imageUri!!, "$name.jpg") ?: contact.image
+                    } else {
+                        contact.image
+                    }
                     if (name.isNotEmpty()) {
                         viewModel.updateContact(
                             Contact(
